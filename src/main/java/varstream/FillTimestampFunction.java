@@ -22,8 +22,6 @@ public class FillTimestampFunction extends TableFunction<Row> {
         if (step == null || step.isNegative())
             return ;
 
-        if (step.)
-
         LocalDateTime current = startTime.truncatedTo(MINUTES);
 
         while (current.isBefore (startTime)) {
