@@ -32,7 +32,10 @@ CREATE VIEW l1_times AS
     )
 ;
 
-CREATE FUNCTION fill_timestamp AS 'varstream.FillTimestampFunction' LANGUAGE JAVA ;
+CREATE FUNCTION fill_sample_per_day    AS 'varstream.FillSample$PerDayFunction'    LANGUAGE JAVA ;
+CREATE FUNCTION fill_sample_per_hour   AS 'varstream.FillSample$PerHourFunction'   LANGUAGE JAVA ;
+CREATE FUNCTION fill_sample_per_minute AS 'varstream.FillSample$PerMinuteFunction' LANGUAGE JAVA ;
+CREATE FUNCTION fill_sample_per_second AS 'varstream.FillSample$PerSecondFunction' LANGUAGE JAVA ;
 
 CREATE VIEW l1_sample AS
     SELECT
@@ -44,19 +47,9 @@ CREATE VIEW l1_sample AS
 	ask_price,
 	(bid_price + ask_price) / 2 AS mid_price
     FROM l1_times AS l1
-    INNER JOIN LATERAL TABLE (fill_timestamp (l1.start_time, l1.end_time, INTERVAL '1' SECOND))
+    INNER JOIN LATERAL TABLE (fill_sample_per_second (l1.start_time, l1.end_time, 1))
       AS T(sample_time) ON TRUE
 ;
-
-    SELECT
-	symbol,
-	start_time,
-	end_time,
-	sample_time,
-	(bid_price + ask_price) / 2 AS mid_price
-    FROM l1_times AS l1
-    INNER JOIN LATERAL TABLE (fill_timestamp (l1.start_time, l1.end_time, INTERVAL '5' MINUTE))
-      AS T(sample_time) ON TRUE
 
 CREATE VIEW l1_sample_prev AS
     SELECT
