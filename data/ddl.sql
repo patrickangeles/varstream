@@ -13,7 +13,7 @@ CREATE TABLE l1 (
     WATERMARK FOR event_time AS event_time - INTERVAL '5' SECONDS
 ) WITH (
     'connector' = 'filesystem',
-    'path' = '/Users/patrick/Documents/workspace/vwap/data/l1_raw',
+    'path' = '/Users/patrick/Documents/workspace/varstream/data/l1_raw',
     'format' = 'csv'
 ) ;
 
@@ -47,6 +47,16 @@ CREATE VIEW l1_sample AS
     INNER JOIN LATERAL TABLE (fill_timestamp (l1.start_time, l1.end_time, INTERVAL '1' SECOND))
       AS T(sample_time) ON TRUE
 ;
+
+    SELECT
+	symbol,
+	start_time,
+	end_time,
+	sample_time,
+	(bid_price + ask_price) / 2 AS mid_price
+    FROM l1_times AS l1
+    INNER JOIN LATERAL TABLE (fill_timestamp (l1.start_time, l1.end_time, INTERVAL '5' MINUTE))
+      AS T(sample_time) ON TRUE
 
 CREATE VIEW l1_sample_prev AS
     SELECT
@@ -102,7 +112,7 @@ CREATE TABLE trades (
     WATERMARK FOR event_time AS event_time - INTERVAL '1' MINUTE
 ) WITH (
     'connector' = 'filesystem',
-    'path' = '/Users/patrick/Documents/workspace/vwap/data/trades_raw',
+    'path' = '/Users/patrick/Documents/workspace/varstream/data/trades_raw',
     'format' = 'csv'
 );
 
