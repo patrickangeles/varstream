@@ -1,3 +1,5 @@
+
+-- 1. Create L1 table
 CREATE TABLE l1 (
     event_time     TIMESTAMP(3),
     symbol         STRING,
@@ -17,6 +19,7 @@ CREATE TABLE l1 (
     'format' = 'csv'
 ) ;
 
+-- 2. Extract effective start and end times for each row (by looking at previous row)
 CREATE VIEW l1_times AS
     SELECT
 	symbol,
@@ -32,6 +35,7 @@ CREATE VIEW l1_times AS
     )
 ;
 
+-- 3. Extract and fill sampled timestamps with help of UDTFs
 CREATE FUNCTION fill_sample_per_day    AS 'varstream.FillSample$PerDayFunction'    LANGUAGE JAVA ;
 CREATE FUNCTION fill_sample_per_hour   AS 'varstream.FillSample$PerHourFunction'   LANGUAGE JAVA ;
 CREATE FUNCTION fill_sample_per_minute AS 'varstream.FillSample$PerMinuteFunction' LANGUAGE JAVA ;
@@ -51,6 +55,7 @@ CREATE VIEW l1_sample AS
       AS T(sample_time) ON TRUE
 ;
 
+-- 4. Grab previous mid_price from last sampled row so we can calculate returns
 CREATE VIEW l1_sample_prev AS
     SELECT
 	symbol,
@@ -66,6 +71,12 @@ CREATE VIEW l1_sample_prev AS
     )
 ;
 
+-- 5. Calculate VAR:
+--      pct_return    = returns relative to previous row
+--      avg_return    = average return over lookback period
+--      stddev_return = std deviation of returns over lookback period
+--      var99_return  = 99% VAR
+--      var99_price   = 99% VAR against this row's mid_price
 CREATE VIEW l1_var99 AS
     SELECT
         *,
@@ -89,8 +100,7 @@ CREATE VIEW l1_var99 AS
     )
 ;
 
-------- TRADES
-
+-- 6. Create trades table
 CREATE TABLE trades (
     symbol         STRING,
     price          DOUBLE,
@@ -110,7 +120,7 @@ CREATE TABLE trades (
 );
 
 
--- sample based and fill forward?
+-- 7. Calculate VWAP over aggregation window (here done by minute)
 CREATE VIEW trades_sample AS (
     SELECT
 	symbol,
@@ -127,12 +137,8 @@ CREATE VIEW trades_sample AS (
 	TUMBLE (event_time, INTERVAL '1' MINUTES), symbol
 );
 
-------- JOIN
-
--- use midprice and not vwap
--- instead of t.vwap, use avg_retrun to calc var99_price
-
-CREATE VIEW var99 AS (
+-- 8. JOIN trades with var99 stream
+CREATE VIEW var99_trades AS (
     SELECT
 	 t.symbol,
 	 t.sample_time AS trade_time,
