@@ -47,7 +47,7 @@ CREATE VIEW l1_sample AS
 	ask_price,
 	(bid_price + ask_price) / 2 AS mid_price
     FROM l1_times AS l1
-    INNER JOIN LATERAL TABLE (fill_sample_per_second (l1.start_time, l1.end_time, 1))
+    INNER JOIN LATERAL TABLE (fill_sample_per_minute (l1.start_time, l1.end_time, 1))
       AS T(sample_time) ON TRUE
 ;
 

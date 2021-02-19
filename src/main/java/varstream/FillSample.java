@@ -8,18 +8,12 @@ import org.apache.flink.types.Row;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 import static java.time.temporal.ChronoUnit.*;
 
 public class FillSample {
-    private final static long SECONDS_PER_MINUTE = 60;
-    private final static long SECONDS_PER_HOUR = SECONDS_PER_MINUTE * 60;
-    private final static long SECONDS_PER_DAY = SECONDS_PER_HOUR * 24;
-    private final static long MILLIS_PER_SECOND = 1000 ;
-    private final static long MICROS_PER_SECOND = 1000 * 1000 ;
-    private final static long NANOS_PER_SECOND = 1000 * 1000 * 1000 ;
-
-    @FunctionHint(output = @DataTypeHint("ROW<ts TIMESTAMP(3)>"))
+    @FunctionHint(output = @DataTypeHint("ROW<sample_time TIMESTAMP(3)>"))
     private static class BaseFunction extends TableFunction<Row> {
         // TODO: INTERVAL type not supported in FlinkSQL / Calcite yet...
         public void eval(LocalDateTime startTime, LocalDateTime endTime, LocalDateTime baseTime, Duration step) {
@@ -37,29 +31,37 @@ public class FillSample {
                 current = current.plus(step);
             }
         }
+
+        void evalForTimeUnit(LocalDateTime startTime, LocalDateTime endTime, ChronoUnit timeUnit, int frequency) {
+            eval(startTime, endTime, startTime.truncatedTo(timeUnit),
+                    Duration.ofSeconds(timeUnit.getDuration().getSeconds() / frequency)) ;
+        }
+
     }
 
     public static class PerDayFunction extends BaseFunction {
-        public void eval(LocalDateTime startTime, LocalDateTime endTime, int slices) {
-            eval(startTime, endTime, startTime.truncatedTo(DAYS), Duration.ofSeconds(SECONDS_PER_DAY / slices));
+        public void eval(LocalDateTime startTime, LocalDateTime endTime, int frequency) {
+            evalForTimeUnit(startTime, endTime, DAYS, frequency);
         }
     }
 
     public static class PerHourFunction extends BaseFunction {
-        public void eval(LocalDateTime startTime, LocalDateTime endTime, int slices) {
-            eval(startTime, endTime, startTime.truncatedTo(HOURS), Duration.ofSeconds(SECONDS_PER_HOUR / slices));
+        public void eval(LocalDateTime startTime, LocalDateTime endTime, int frequency) {
+            evalForTimeUnit(startTime, endTime, HOURS, frequency);
         }
     }
 
     public static class PerMinuteFunction extends BaseFunction {
-        public void eval(LocalDateTime startTime, LocalDateTime endTime, int slices) {
-            eval(startTime, endTime, startTime.truncatedTo(MINUTES), Duration.ofSeconds(SECONDS_PER_MINUTE / slices));
+        public void eval(LocalDateTime startTime, LocalDateTime endTime, int frequency) {
+            evalForTimeUnit(startTime, endTime, MINUTES, frequency);
         }
     }
 
     public static class PerSecondFunction extends BaseFunction {
-        public void eval(LocalDateTime startTime, LocalDateTime endTime, int slices) {
-            eval(startTime, endTime, startTime.truncatedTo(SECONDS), Duration.ofNanos(NANOS_PER_SECOND / slices));
+        private final static long NANOS_PER_SECOND = 1000 * 1000 * 1000 ;
+
+        public void eval(LocalDateTime startTime, LocalDateTime endTime, int frequency) {
+            eval(startTime, endTime, startTime.truncatedTo(SECONDS), Duration.ofNanos(NANOS_PER_SECOND / frequency));
         }
     }
 }
