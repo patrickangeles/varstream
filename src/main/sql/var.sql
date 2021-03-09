@@ -1,3 +1,23 @@
+-- 1. Create L1 table
+CREATE TABLE l1 (
+    event_time     TIMESTAMP(3),
+    symbol         STRING,
+    best_bid_prc   DOUBLE,
+    best_bid_vol   INT,
+    tot_bid_vol    INT,
+    num            INT,
+    sym2           STRING,
+    best_ask_prc   DOUBLE,
+    best_ask_vol   INT,
+    tot_ask_vol    INT,
+    num2           INT,
+    WATERMARK FOR event_time AS event_time - INTERVAL '5' SECONDS
+) WITH (
+    'connector' = 'filesystem',
+    'path' = '/Users/patrick/Documents/workspace/varstream/data/l1_raw',
+    'format' = 'csv'
+) ;
+
 -- Grab previous price
 CREATE VIEW l1_times AS
     SELECT
@@ -15,6 +35,10 @@ CREATE VIEW l1_times AS
 ;
 
 -- Extract and fill sampled timestamps with help of UDTFs
+CREATE FUNCTION fill_sample_per_day    AS 'varstream.FillSample$PerDayFunction'    LANGUAGE JAVA ;
+CREATE FUNCTION fill_sample_per_hour   AS 'varstream.FillSample$PerHourFunction'   LANGUAGE JAVA ;
+CREATE FUNCTION fill_sample_per_minute AS 'varstream.FillSample$PerMinuteFunction' LANGUAGE JAVA ;
+CREATE FUNCTION fill_sample_per_second AS 'varstream.FillSample$PerSecondFunction' LANGUAGE JAVA ;
 
 CREATE VIEW l1_sample AS
     SELECT

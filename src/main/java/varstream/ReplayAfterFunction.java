@@ -12,21 +12,37 @@ import java.time.temporal.ChronoUnit;
 
 import static java.time.temporal.ChronoUnit.*;
 
-@FunctionHint(output = @DataTypeHint("ROW<sample_time TIMESTAMP(3)>"))
-public class Delay extends TableFunction<Row> {
-    public void eval(LocalDateTime startTime, LocalDateTime rowTime) {
-        if (step == null || step.isZero() || step.isNegative())
-            return;
+/**
+ * Keeps previous row time in a private static variable.
+ * Probably not safe to use this in production
+ */
+@FunctionHint (output = @DataTypeHint("ROW<delay BIGINT>"))
+public class ReplayAfterFunction extends TableFunction<Row> {
 
-        LocalDateTime current = baseTime;
+    private static LocalDateTime startTime = null ;
 
-        while (current.isBefore(startTime)) {
-            current = current.plus(step);
+    @FunctionHint (input = {@DataTypeHint("INT"), @DataTypeHint("TIMESTAMP(3)")})
+    public void eval(Integer minutes, LocalDateTime rowTime) {
+        if (rowTime == null) {
+            return ;
         }
 
-        while (current.isBefore(endTime)) {
-            collect(Row.of(current));
-            current = current.plus(step);
+        if (startTime == null) {
+            startTime = rowTime.plusMinutes(minutes) ;
         }
+
+        if (rowTime.isBefore(startTime)) {
+            return ;
+        }
+
+        try {
+            long duration = Duration.between (startTime, rowTime).toMillis() ;
+            Thread.sleep (duration) ;
+            collect (Row.of (duration)) ;
+        }
+        catch (InterruptedException e) {
+            // do nuffin
+        }
+        startTime = rowTime ;
     }
 }
