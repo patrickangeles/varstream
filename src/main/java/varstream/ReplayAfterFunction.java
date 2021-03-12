@@ -13,13 +13,13 @@ import java.time.temporal.ChronoUnit;
 import static java.time.temporal.ChronoUnit.*;
 
 /**
- * Keeps previous row time in a private static variable.
+ * Keeps state in a private static variable.
  * Probably not safe to use this in production
  */
 @FunctionHint (output = @DataTypeHint("ROW<delay BIGINT>"))
 public class ReplayAfterFunction extends TableFunction<Row> {
 
-    private static LocalDateTime startTime = null ;
+    private static Duration differenceFromNow = null ;
 
     @FunctionHint (input = {@DataTypeHint("INT"), @DataTypeHint("TIMESTAMP(3)")})
     public void eval(Integer minutes, LocalDateTime rowTime) {
@@ -27,22 +27,26 @@ public class ReplayAfterFunction extends TableFunction<Row> {
             return ;
         }
 
-        if (startTime == null) {
-            startTime = rowTime.plusMinutes(minutes) ;
+        if (differenceFromNow == null) {
+            // first time calling this function
+            differenceFromNow = Duration.between(rowTime.plusMinutes(minutes), LocalDateTime.now()) ;
         }
 
-        if (rowTime.isBefore(startTime)) {
+        LocalDateTime adjustedRowTime = rowTime.plus(differenceFromNow) ;
+        LocalDateTime now = LocalDateTime.now () ;
+
+        if (adjustedRowTime.isBefore(now)) {
             return ;
         }
 
         try {
-            long duration = Duration.between (startTime, rowTime).toMillis() ;
+            // adjusted row time is later than now, so we wait
+            long duration = Duration.between (now, adjustedRowTime).toMillis() ;
             Thread.sleep (duration) ;
             collect (Row.of (duration)) ;
         }
         catch (InterruptedException e) {
             // do nuffin
         }
-        startTime = rowTime ;
     }
 }

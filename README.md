@@ -1,9 +1,10 @@
 # varstream
 > Streaming VAR with Flink SQL
 
-Demonstrating the power of Flink SQL for stream processing of market data.
+Demonstrating the power of Flink SQL for stream processing of market data. The SQL scripts in this
+project make use of custom UDFs. See below for instructions on how to build.
 
-## Build
+## Build UDFs
 
 ```sh
 git clone https://github.com/patrickangeles/varstream

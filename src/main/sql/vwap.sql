@@ -29,6 +29,27 @@ GROUP BY
   symbol
 ;
 
+-- "Live" replay
+CREATE FUNCTION replay_after AS 'varstream.ReplayAfterFunction' LANGUAGE JAVA ;
+
+CREATE VIEW trades_replay AS (
+    SELECT * FROM trades
+    LEFT JOIN LATERAL TABLE (replay_after (120, trades.event_time)) ON TRUE
+) ;
+
+SELECT * FROM trades_replay ;
+
+SELECT
+  symbol,
+  SUM (vol)                     AS cumulative_volume,
+  SUM (price * vol)             AS cumulative_pv,
+  SUM (price * vol) / SUM (vol) AS vwap
+FROM
+  trades_replay
+GROUP BY
+  symbol
+;
+
 -- 1 minute window VWAP
 CREATE VIEW vwap_1m AS (
     SELECT
@@ -62,23 +83,3 @@ CREATE VIEW vwap_5m AS (
     GROUP BY
 	HOP (event_time, INTERVAL '1' MINUTES, INTERVAL '5' MINUTES), symbol
 );
-
--- "Live" replay
-CREATE FUNCTION replay_after AS 'varstream.ReplayAfterFunction' LANGUAGE JAVA ;
-
-CREATE VIEW trades_replay AS (
-    SELECT * FROM trades
-    LEFT JOIN LATERAL TABLE (replay_after (120, trades.event_time)) ON TRUE
-) ;
-
-SELECT
-  symbol,
-  SUM (vol)                     AS cumulative_volume,
-  SUM (price * vol)             AS cumulative_pv,
-  SUM (price * vol) / SUM (vol) AS vwap
-FROM
-  trades_replay
-GROUP BY
-  symbol
-;
-
