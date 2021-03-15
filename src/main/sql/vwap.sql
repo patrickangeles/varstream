@@ -67,6 +67,8 @@ CREATE VIEW vwap_1m AS (
 	TUMBLE (event_time, INTERVAL '1' MINUTES), symbol
 );
 
+SELECT symbol, start_time, total_price, total_vol, vwap FROM vwap_1m ;
+
 -- 5 minute sliding window VWAP (1 minute increments)
 CREATE VIEW vwap_5m AS (
     SELECT
@@ -83,3 +85,5 @@ CREATE VIEW vwap_5m AS (
     GROUP BY
 	HOP (event_time, INTERVAL '1' MINUTES, INTERVAL '5' MINUTES), symbol
 );
+
+SELECT symbol, start_time, total_price, total_vol, vwap FROM vwap_5m ;
