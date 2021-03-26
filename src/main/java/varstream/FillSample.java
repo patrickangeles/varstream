@@ -15,7 +15,7 @@ import static java.time.temporal.ChronoUnit.*;
 public class FillSample {
     @FunctionHint(output = @DataTypeHint("ROW<sample_time TIMESTAMP(3)>"))
     private static class BaseFunction extends TableFunction<Row> {
-        // TODO: INTERVAL type not supported in FlinkSQL / Calcite yet...
+        // TODO: INTERVAL type UDF params not supported in FlinkSQL / Calcite yet (CALCITE-4504)
         public void eval(LocalDateTime startTime, LocalDateTime endTime, LocalDateTime baseTime, Duration step) {
             if (step == null || step.isZero() || step.isNegative())
                 return;
@@ -36,7 +36,6 @@ public class FillSample {
             eval(startTime, endTime, startTime.truncatedTo(timeUnit),
                     Duration.ofSeconds(timeUnit.getDuration().getSeconds() / frequency)) ;
         }
-
     }
 
     public static class PerDayFunction extends BaseFunction {

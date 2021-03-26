@@ -18,6 +18,21 @@ CREATE TABLE l1 (
     'format' = 'csv'
 ) ;
 
+-- This query will show gaps when there are no observations in a second
+    SELECT
+        symbol,
+        TUMBLE_START (event_time, INTERVAL '1' SECOND) AS start_time,
+        TUMBLE_ROWTIME (event_time, INTERVAL '1' SECOND) AS row_time,
+        LAST_VALUE (best_bid_prc) AS best_bid_prc,
+        LAST_VALUE (best_ask_prc) AS best_ask_prc
+    FROM
+        l1
+    GROUP BY
+        TUMBLE (event_time, INTERVAL '1' SECOND), symbol
+    LIMIT 20
+    ;
+
+
 -- Establish effective time range
 CREATE VIEW l1_times AS
     SELECT
